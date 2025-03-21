@@ -6,20 +6,26 @@ import (
 )
 
 type TaxIncludedPriceJob struct {
-	TaxRate           float64
-	InputPrices       []float64
-	TaxIncludedPrices map[string]float64
+	TaxRate           float64           `json:"tax_rate"`
+	InputPrices       []float64         `json:"input_prices"`
+	TaxIncludedPrices map[string]string `json:"tax_included_prices"`
+	IoManager         util.IoManager    `json:"-"`
 }
 
-func New(taxRate float64) *TaxIncludedPriceJob {
+func New(io util.IoManager, taxRate float64) *TaxIncludedPriceJob {
 	return &TaxIncludedPriceJob{
 		TaxRate:     taxRate,
 		InputPrices: []float64{10, 20, 30},
+		IoManager:   io,
 	}
 }
 
-func (job TaxIncludedPriceJob) Process() {
-	job.LoadData()
+func (job TaxIncludedPriceJob) Process() error {
+	err := job.LoadData()
+
+	if err != nil {
+		return err
+	}
 
 	result := make(map[string]string)
 
@@ -28,24 +34,25 @@ func (job TaxIncludedPriceJob) Process() {
 		result[fmt.Sprintf("%.2f", price)] = fmt.Sprintf("%.2f", taxIncludedPrice)
 	}
 
-	fmt.Println(result)
+	job.TaxIncludedPrices = result
+	return job.IoManager.WriteResult(job)
 }
 
-func (job *TaxIncludedPriceJob) LoadData() {
+func (job *TaxIncludedPriceJob) LoadData() error {
 
-	lines, err := util.ReadLines("prices.txt")
+	lines, err := job.IoManager.ReadLines()
 
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
 	prices, err := util.StringsToFloat(lines)
 
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
 	job.InputPrices = prices
+
+	return nil
 }
