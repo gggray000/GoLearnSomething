@@ -11,10 +11,10 @@ type Event struct {
 	Description string    `binding:"required"`
 	Location    string    `binding:"required"`
 	DateTime    time.Time `binding:"required"`
-	UserID      int
+	UserID      int64
 }
 
-func (e Event) Save() error {
+func (e *Event) Save() error {
 	query := `
 	INSERT INTO events(name, description, location, dateTime, user_id) 
 	VALUES (?,?,?,?,?)
@@ -38,7 +38,7 @@ func (e Event) Save() error {
 
 func GetAllEvents() ([]Event, error) {
 	query := `SELECT * FROM events`
-	// Querry() only fetch, whereas Exec() can change data
+	// Query() only fetch, whereas Exec() can change data
 	rows, err := database.DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,14 @@ func GetAllEvents() ([]Event, error) {
 	var events = []Event{}
 	for rows.Next() {
 		var event Event
-		err := rows.Scan(&event.ID, &event.Name, &event.Description, &event.Location, &event.DateTime, &event.UserID)
+		err := rows.Scan(
+			&event.ID,
+			&event.Name,
+			&event.Description,
+			&event.Location,
+			&event.DateTime,
+			&event.UserID,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -56,4 +63,56 @@ func GetAllEvents() ([]Event, error) {
 	}
 
 	return events, nil
+}
+
+func GetEventById(id int64) (*Event, error) {
+	query := `SELECT * FROM events WHERE id = ?`
+	row := database.DB.QueryRow(query, id)
+	var event Event
+	err := row.Scan(
+		&event.ID,
+		&event.Name,
+		&event.Description,
+		&event.Location,
+		&event.DateTime,
+		&event.UserID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &event, nil
+}
+
+func (e *Event) Update() error {
+	query := `
+	UPDATE events
+    SET name = ?, description = ?, location = ?, dateTime = ?
+	WHERE id = ?
+        `
+
+	statement, err := database.DB.Prepare(query)
+
+	if err != nil {
+		return err
+	}
+
+	defer statement.Close()
+
+	_, err = statement.Exec(e.Name, e.Description, e.Location, e.DateTime, e.ID)
+	return err
+}
+
+func (e *Event) Delete() error {
+	query := "DELETE FROM events WHERE id = ?"
+
+	statement, err := database.DB.Prepare(query)
+
+	if err != nil {
+		return err
+	}
+
+	defer statement.Close()
+
+	_, err = statement.Exec(e.ID)
+	return err
 }
