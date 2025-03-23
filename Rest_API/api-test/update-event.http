@@ -1,9 +1,10 @@
 PUT http://localhost:8080/events/2
 content-type:application/json
+authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QzQHRlc3QuY29tIiwiZXhwIjoxNzQyNzg1ODU1LCJ1c2VySWQiOjN9.7NzJLJAb9t4VwT9PYPYde5YTQFDsGJlRljoNiT10g90
 
 {
-  "name": "Updated test event",
+  "name": "Updated test event By User 3",
   "description": "Updated",
-  "location": "Test field 2",
-  "dateTime": "2025-03-22T20:30:00Z"
+  "location": "Test field 3",
+  "dateTime": "2025-03-23T11:10:00Z"
 }
