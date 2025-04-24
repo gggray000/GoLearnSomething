@@ -11,15 +11,15 @@ RUN apk add --no-cache git
 
 ENV GOPROXY=https://goproxy.cn,direct
 ENV GOSUMDB=off
-RUN CGO_ENABLED=0 go build -o brokerApp ./cmd/api
+RUN CGO_ENABLED=0 go build -o authApp ./cmd/api
 
-RUN chmod +x /app/brokerApp
+RUN chmod +x /app/authApp
 
-# build a tiny docker imageß
+# build a tiny docker image
 FROM alpine:latest
 
 RUN mkdir /app
 
-COPY --from=builder /app/brokerApp /app
+COPY --from=builder /app/authApp /app
 
-CMD ["/app/brokerApp"]
+CMD ["/app/authApp"]
