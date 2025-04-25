@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -12,11 +11,25 @@ import (
 type RequestPayload struct {
 	Action string      `json:"action"`
 	Auth   AuthPayload `json:"auth,omitempty"`
+	Log    LogPayLoad  `json:"log,omitempty"`
+	Mail   MailPayload `json:"mail,omitempty"`
 }
 
 type AuthPayload struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type LogPayLoad struct {
+	Name string `json:"name"`
+	Data string `json:"data"`
+}
+
+type MailPayload struct {
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Message string `json:"message"`
 }
 
 func (app *Config) Broker(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +59,10 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	switch requestPayload.Action {
 	case "auth":
 		app.authenticate(w, requestPayload.Auth)
+	case "log":
+		app.logItem(w, requestPayload.Log)
+	case "mail":
+		app.sendMail(w, requestPayload.Mail)
 	default:
 		app.writeJsonError(w, errors.New("unknown action"))
 	}
@@ -57,16 +74,14 @@ func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	// call the service
 	request, err := http.NewRequest("POST", "http://authentication-service/authenticate", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Println("some message", err)
 		app.writeJsonError(w, err)
 		return
 	}
-
+	request.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	response, err := client.Do(request)
-	fmt.Println(response)
+
 	if err != nil {
-		log.Println("some message", err)
 		app.writeJsonError(w, err)
 		return
 	}
@@ -77,7 +92,6 @@ func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 		app.writeJsonError(w, errors.New("invalid credentials"))
 		return
 	} else if response.StatusCode != http.StatusAccepted {
-		log.Println("response:", response)
 		app.writeJsonError(w, errors.New("error calling auth service"))
 		return
 	}
@@ -103,4 +117,70 @@ func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	payload.Data = jsonFromService.Data
 
 	app.writeJson(w, http.StatusAccepted, payload)
+}
+
+func (app *Config) logItem(w http.ResponseWriter, entry LogPayLoad) {
+	jsonData, _ := json.MarshalIndent(entry, "", "\t")
+
+	logServiceURL := "http://logger-service/log"
+	request, err := http.NewRequest("POST", logServiceURL, bytes.NewBuffer(jsonData))
+
+	if err != nil {
+		app.writeJsonError(w, err)
+		return
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	response, err := client.Do(request)
+
+	if err != nil {
+		app.writeJsonError(w, err)
+		return
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted {
+		app.writeJsonError(w, errors.New("error calling logger service"))
+		return
+	}
+
+	var jsonFromService jsonResponse
+	jsonFromService.Error = false
+	jsonFromService.Message = "Logged successfully"
+	app.writeJson(w, http.StatusAccepted, jsonFromService)
+}
+
+// In reality, broker service should not talk to mail service directly, because malicious users can send JSON payload to send spams.
+// When sending email is necessary, the request should be routed to auth service, which will talk to mail service.
+func (app *Config) sendMail(w http.ResponseWriter, msg MailPayload) {
+	jsonData, _ := json.MarshalIndent(msg, "", "\t")
+
+	mailServiceURL := "http://mail-service/send"
+	request, err := http.NewRequest("POST", mailServiceURL, bytes.NewBuffer(jsonData))
+
+	if err != nil {
+		app.writeJsonError(w, err)
+		return
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	response, err := client.Do(request)
+
+	if err != nil {
+		app.writeJsonError(w, err)
+		return
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted {
+		app.writeJsonError(w, errors.New("error calling mail service"))
+		return
+	}
+
+	var jsonFromService jsonResponse
+	jsonFromService.Error = false
+	jsonFromService.Message = "Mail sent successfully to " + msg.To
+	app.writeJson(w, http.StatusAccepted, jsonFromService)
 }

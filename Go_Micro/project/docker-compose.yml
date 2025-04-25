@@ -11,7 +11,7 @@ services:
     environment:
       - HTTP_PROXY=http://host.docker.internal:7890
       - HTTPS_PROXY=http://host.docker.internal:7890
-      - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service
+      - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, logger-service, mailhog, mail-service
     deploy:
       mode: replicated
       replicas: 1
@@ -27,7 +27,41 @@ services:
       - DSN=host=postgres port=5432 user=postgres password=password dbname=users sslmode=disable timezone=UTC connect_timeout=5
       - HTTP_PROXY=http://host.docker.internal:7890
       - HTTPS_PROXY=http://host.docker.internal:7890
-      - NO_PROXY=localhost,127.0.0.1,postgres,broker-service
+      - NO_PROXY=localhost,127.0.0.1,postgres,broker-service, logger-service, mailhog, mail-service
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  logger-service:
+    build:
+      context: ../logger-service
+      dockerfile: ../logger-service/logger-service.dockerfile
+    restart: always
+    environment:
+      - HTTP_PROXY=http://host.docker.internal:7890
+      - HTTPS_PROXY=http://host.docker.internal:7890
+      - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, broker-service, mongo, mailhog, mail-service
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  mail-service:
+    build:
+      context: ../mail-service
+      dockerfile: ../mail-service/mail-service.dockerfile
+    restart: always
+    environment:
+      - MAILER_DOMAIN=localhost
+      - MAILER_HOST=mailhog
+      - MAILER_PORT=1025
+      - MAILER_USERNAME=none
+      - MAILER_PASSWORD=""
+      - MAILER_ENCRYPTION=""
+      - MAILER_FROMADDRESS=john.smith@example.com
+      - MAILER_FROMNAME=John Smith
+      - HTTP_PROXY=http://host.docker.internal:7890
+      - HTTPS_PROXY=http://host.docker.internal:7890
+      - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, broker-service, logger-service, mongo, mailhog
     deploy:
       mode: replicated
       replicas: 1
@@ -54,3 +88,13 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: password
     volumes:
       - ./db-data/mongo/:/data/db
+
+  mailhog:
+    image: 'mailhog/mailhog:latest'
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    environment:
+      - HTTP_PROXY=http://host.docker.internal:7890
+      - HTTPS_PROXY=http://host.docker.internal:7890
+      - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, broker-service, logger-service, mongo, mail-service
