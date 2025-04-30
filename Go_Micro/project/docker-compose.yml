@@ -9,8 +9,8 @@ services:
     ports:
       - "8080:80"
     environment:
-      - HTTP_PROXY=http://host.docker.internal:7890
-      - HTTPS_PROXY=http://host.docker.internal:7890
+   #   - HTTP_PROXY=http://host.docker.internal:7890
+   #   - HTTPS_PROXY=http://host.docker.internal:7890
       - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, logger-service, mailhog, mail-service
     deploy:
       mode: replicated
@@ -25,8 +25,8 @@ services:
       - "8081:80"
     environment:
       - DSN=host=postgres port=5432 user=postgres password=password dbname=users sslmode=disable timezone=UTC connect_timeout=5
-      - HTTP_PROXY=http://host.docker.internal:7890
-      - HTTPS_PROXY=http://host.docker.internal:7890
+  #    - HTTP_PROXY=http://host.docker.internal:7890
+  #    - HTTPS_PROXY=http://host.docker.internal:7890
       - NO_PROXY=localhost,127.0.0.1,postgres,broker-service, logger-service, mailhog, mail-service
     deploy:
       mode: replicated
@@ -38,8 +38,8 @@ services:
       dockerfile: ../logger-service/logger-service.dockerfile
     restart: always
     environment:
-      - HTTP_PROXY=http://host.docker.internal:7890
-      - HTTPS_PROXY=http://host.docker.internal:7890
+   #   - HTTP_PROXY=http://host.docker.internal:7890
+   #   - HTTPS_PROXY=http://host.docker.internal:7890
       - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, broker-service, mongo, mailhog, mail-service
     deploy:
       mode: replicated
@@ -59,8 +59,8 @@ services:
       - MAILER_ENCRYPTION=""
       - MAILER_FROMADDRESS=john.smith@example.com
       - MAILER_FROMNAME=John Smith
-      - HTTP_PROXY=http://host.docker.internal:7890
-      - HTTPS_PROXY=http://host.docker.internal:7890
+   #   - HTTP_PROXY=http://host.docker.internal:7890
+   #   - HTTPS_PROXY=http://host.docker.internal:7890
       - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, broker-service, logger-service, mongo, mailhog
     deploy:
       mode: replicated
@@ -95,9 +95,17 @@ services:
       - "1025:1025"
       - "8025:8025"
     environment:
-      - HTTP_PROXY=http://host.docker.internal:7890
-      - HTTPS_PROXY=http://host.docker.internal:7890
+   #   - HTTP_PROXY=http://host.docker.internal:7890
+   #   - HTTPS_PROXY=http://host.docker.internal:7890
       - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, broker-service, logger-service, mongo, mail-service
+
+  listener-service:
+    build:
+      context: ../listener-service
+      dockerfile: ../listener-service/listener-service.dockerfile
+    deploy:
+      mode: replicated
+      replicas: 1
 
   rabbitmq:
     image: 'rabbitmq:4.1-alpine'
