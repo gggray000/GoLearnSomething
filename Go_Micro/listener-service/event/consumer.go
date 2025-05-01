@@ -67,7 +67,7 @@ func (consumer *Consumer) Listen(topics []string) error {
 	messages, err := ch.Consume(
 		q.Name,
 		"",
-		true,
+		false,
 		false,
 		false,
 		false,
@@ -82,7 +82,7 @@ func (consumer *Consumer) Listen(topics []string) error {
 		for d := range messages {
 			var payload Payload
 			_ = json.Unmarshal(d.Body, &payload)
-
+			log.Printf("Received message: %+v", payload)
 			go handlePayload(payload)
 		}
 	}()
@@ -101,9 +101,11 @@ func handlePayload(payload Payload) {
 		if err != nil {
 			log.Println(err)
 		}
-
 	case "auth":
-	// authenticate
+		err := logEvent(payload)
+		if err != nil {
+			log.Println(err)
+		}
 	default:
 		err := logEvent(payload)
 		if err != nil {

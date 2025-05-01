@@ -5,8 +5,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"log"
+	"fmt"
 	"net/http"
+	"net/rpc"
 )
 
 type RequestPayload struct {
@@ -52,7 +53,6 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 
 	err := app.readJson(w, r, &requestPayload)
 	if err != nil {
-		log.Println("some message", err)
 		app.writeJsonError(w, err)
 		return
 	}
@@ -62,7 +62,8 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 		app.authenticate(w, requestPayload.Auth)
 	case "log":
 		//app.logItem(w, requestPayload.Log)
-		app.logEventViaRabbit(w, requestPayload.Log)
+		//app.logEventViaRabbit(w, requestPayload.Log)
+		app.logItemViaRPC(w, requestPayload.Log)
 	case "mail":
 		app.sendMail(w, requestPayload.Mail)
 	default:
@@ -119,6 +120,9 @@ func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	payload.Data = jsonFromService.Data
 
 	app.writeJson(w, http.StatusAccepted, payload)
+
+	authLog := fmt.Sprintf("Rabbit: User %v has logged in.", payload.Data.(map[string]interface{})["email"])
+	app.pushToQueue("auth", authLog)
 }
 
 func (app *Config) logItem(w http.ResponseWriter, entry LogPayLoad) {
@@ -133,9 +137,10 @@ func (app *Config) logItem(w http.ResponseWriter, entry LogPayLoad) {
 	}
 
 	request.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	response, err := client.Do(request)
 
+	client := &http.Client{}
+
+	response, err := client.Do(request)
 	if err != nil {
 		app.writeJsonError(w, err)
 		return
@@ -187,11 +192,12 @@ func (app *Config) sendMail(w http.ResponseWriter, msg MailPayload) {
 	app.writeJson(w, http.StatusAccepted, jsonFromService)
 }
 
-// Replacement for logItem()
+// Replacement for logItem(), it calls logger-service by pushing the payload to RabbitMQ
 func (app *Config) logEventViaRabbit(w http.ResponseWriter, l LogPayLoad) {
 	err := app.pushToQueue(l.Name, l.Data)
 	if err != nil {
 		app.writeJsonError(w, err)
+		return
 	}
 
 	var jsonFromService jsonResponse
@@ -218,4 +224,35 @@ func (app *Config) pushToQueue(name, msg string) error {
 	}
 
 	return nil
+}
+
+type RPCPayload struct {
+	Name string
+	Data string
+}
+
+func (app *Config) logItemViaRPC(w http.ResponseWriter, l LogPayLoad) {
+	client, err := rpc.Dial("tcp", "logger-service:5001")
+	if err != nil {
+		app.writeJsonError(w, err)
+		return
+	}
+
+	rpcPayload := RPCPayload{
+		Name: l.Name,
+		Data: l.Data,
+	}
+
+	var result string
+	err = client.Call("RPCServer.LogInfo", rpcPayload, &result)
+	if err != nil {
+		app.writeJsonError(w, err)
+		return
+	}
+
+	jsonResultFromRPCServer := jsonResponse{
+		Error:   false,
+		Message: result,
+	}
+	app.writeJson(w, http.StatusAccepted, jsonResultFromRPCServer)
 }

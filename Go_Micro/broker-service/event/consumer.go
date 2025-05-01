@@ -67,7 +67,7 @@ func (consumer *Consumer) Listen(topics []string) error {
 	messages, err := ch.Consume(
 		q.Name,
 		"",
-		true,
+		false,
 		false,
 		false,
 		false,
@@ -85,7 +85,6 @@ func (consumer *Consumer) Listen(topics []string) error {
 				log.Printf("failed to unmarshal message: %v\n", err)
 				return
 			}
-
 			go handlePayload(payload)
 		}
 	}()

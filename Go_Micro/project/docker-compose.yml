@@ -11,7 +11,7 @@ services:
     environment:
    #   - HTTP_PROXY=http://host.docker.internal:7890
    #   - HTTPS_PROXY=http://host.docker.internal:7890
-      - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, logger-service, mailhog, mail-service
+      - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, logger-service, mailhog, mail-service, listener-service
     deploy:
       mode: replicated
       replicas: 1
@@ -40,7 +40,7 @@ services:
     environment:
    #   - HTTP_PROXY=http://host.docker.internal:7890
    #   - HTTPS_PROXY=http://host.docker.internal:7890
-      - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, broker-service, mongo, mailhog, mail-service
+      - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, broker-service, mongo, mailhog, mail-service, listener-service
     deploy:
       mode: replicated
       replicas: 1
@@ -106,11 +106,14 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+    environment:
+      - NO_PROXY=localhost,127.0.0.1,postgres,authentication-service, broker-service, logger-service, mongo, mail-service
 
   rabbitmq:
-    image: 'rabbitmq:4.1-alpine'
+    image: 'rabbitmq:4.0-management-alpine'
     ports:
       - "5672:5672"
+      - "15672:15672"
     deploy:
       mode: replicated
       replicas: 1
