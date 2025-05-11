@@ -49,7 +49,7 @@
                 method: 'POST',
             }
 
-            fetch("http:\/\/localhost:8080", body)
+            fetch({{.BrokerURL}}, body)
                 .then((response) => response.json())
                 .then((data) => {
                     sent.innerHTML = "empty post request";
@@ -84,7 +84,7 @@
                 headers: headers,
             }
 
-            fetch("http:\/\/localhost:8080/handle", body)
+            fetch({{print .BrokerURL "/handle"}}, body)
                 .then((response) => response.json())
                 .then((data) => {
                     console.log("Data:", data);
@@ -119,7 +119,7 @@
                     headers: headers,
                 }
 
-            fetch("http:\/\/localhost:8080/handle", body)
+            fetch({{print .BrokerURL "/handle"}}, body)
                 .then((response) => response.json())
                 .then((data) => {
                     console.log("Data:", data);
@@ -157,7 +157,7 @@
                 headers: headers,
             }
 
-            fetch("http:\/\/localhost:8080/handle", body)
+            fetch({{print .BrokerURL "/handle"}}, body)
                 .then((response) => response.json())
                 .then((data) => {
                     console.log("Data:", data);
@@ -192,7 +192,7 @@
                 headers: headers,
             }
 
-            fetch("http:\/\/localhost:8080/log-grpc", body)
+            fetch({{print .BrokerURL "/log-grpc"}}, body)
                 .then((response) => response.json())
                 .then((data) => {
                     console.log("Data:", data);
