@@ -69,7 +69,7 @@ services:
       mode: global
 
   mailhog:
-    image: 'mailhog/mailhog:latest'
+    image: 'jcalonso/mailhog:latest'
     ports:
       - "8025:8025"
     deploy:
