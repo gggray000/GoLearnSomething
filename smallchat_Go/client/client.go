@@ -25,7 +25,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	fmt.Println("Connected to server")
+	fmt.Println("Failed to connect to server")
 
 	// go routine for accepting messages from server
 	go func() {
