@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 )
@@ -53,6 +54,16 @@ func initChat() {
 	}
 }
 
+func broadcastMsg(client *Client, msg string) {
+	chatState.clientsLock.Lock()
+	for _, cli := range chatState.clients {
+		if cli != client {
+			cli.readChan <- ">> " + client.nickname + ": " + msg + "\r\n"
+		}
+	}
+	chatState.clientsLock.Unlock()
+}
+
 func closeClient(client *Client) {
 	chatState.clientsLock.Lock()
 	close(client.readChan)
@@ -67,7 +78,10 @@ func closeClient(client *Client) {
 }
 
 func handleNewClient(client *Client) {
-	welcomeMsg := "Welcome to Simple Chat! Use /nickname to change nick name.\n"
+	welcomeMsg := "Welcome to Simple Chat!\n" +
+		"Use /nickname to change nick name.\n" +
+		"Use /cow to say something like a cow.\n" +
+		"Use /dragon to say something like a dragon.\n"
 	client.conn.Write([]byte(welcomeMsg))
 
 	buffer := make([]byte, 256)
@@ -85,14 +99,49 @@ func handleNewClient(client *Client) {
 			// Handling command lines
 			parts := strings.SplitN(msg, " ", 2)
 			cmd := parts[0]
-			if cmd == "/nickname" && len(parts) > 1 {
-				if len(parts[1]) > maxNicknameLength {
-					client.conn.Write([]byte("Nickname is too long, please try again.\n"))
-					continue
+			switch cmd {
+
+			case "/nickname":
+				if len(parts) > 1 {
+					if len(parts[1]) > maxNicknameLength {
+						client.conn.Write([]byte("Nickname is too long, please try again.\n"))
+						continue
+					}
+					client.nickname = parts[1]
 				}
-				client.nickname = parts[1]
+				continue
+
+			case "/cow":
+				if len(parts) > 1 {
+					out, err := exec.Command("cowsay", parts[1]).Output()
+					if err != nil {
+						fmt.Println("Error calling cowsay:", err)
+						continue
+					}
+					broadcastMsg(client, "\n" + string(out))
+				}
+				continue
+
+			case "/dragon":
+				if len(parts) > 1 {
+					out, err := exec.Command("cowsay", "-f", "dragon", parts[1]).Output()
+					if err != nil {
+						fmt.Println("Error calling cowsay:", err)
+						continue
+					}
+					broadcastMsg(client, "\n" + string(out))
+				}
+				continue
+
 			}
-			continue
+			// if cmd == "/nickname" && len(parts) > 1 {
+			// 	if len(parts[1]) > maxNicknameLength {
+			// 		client.conn.Write([]byte("Nickname is too long, please try again.\n"))
+			// 		continue
+			// 	}
+			// 	client.nickname = parts[1]
+			// }
+			// continue
 		}
 
 		if len(msg) == 0 {
@@ -106,13 +155,7 @@ func handleNewClient(client *Client) {
 
 		fmt.Printf("%s:%s\n", client.nickname, msg)
 
-		chatState.clientsLock.Lock()
-		for _, cli := range chatState.clients {
-			if cli != client {
-				cli.readChan <- ">> " + client.nickname + ": " + msg + "\r\n"
-			}
-		}
-		chatState.clientsLock.Unlock()
+		broadcastMsg(client, msg)
 	}
 }
 

@@ -5,7 +5,7 @@ The repositories contains:
 2. Source code of a Udemy Course for Go Microservices.
 3. Source code of smallchat* in Go.
 
-
+![smallchat](image.png)
 
 
 
