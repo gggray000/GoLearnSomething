@@ -25,7 +25,7 @@ type Client struct {
 	readChan chan string
 }
 
-func (c Client) startRecovery() {
+func (c Client) startRecv() {
 	for msg := range c.readChan {
 		_, err := c.conn.Write([]byte(msg + "\r\n"))
 		if err != nil {
@@ -184,7 +184,7 @@ func main() {
 		chatState.clientsLock.Unlock()
 
 		go handleNewClient(client)
-		go client.startRecovery()
+		go client.startRecv()
 		fmt.Printf("New client: %s\n", client.conn.RemoteAddr().String())
 	}
 
