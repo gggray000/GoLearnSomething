@@ -1,2 +1,5 @@
-UC-547118a2-470d-406d-974d-b99c6c85d725.pdf
-.idea
+/.idea/.gitignore
+/.idea/GolangCourse.iml
+/.idea/GoLearnSomething.iml
+/.idea/modules.xml
+/.idea/vcs.xml
