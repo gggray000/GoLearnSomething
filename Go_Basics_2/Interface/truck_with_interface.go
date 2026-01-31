@@ -8,7 +8,7 @@ import (
 
 var (
 	ErrNotImplemented = errors.New("Not implemented.")
-	ErrTruckNotFound = errors.New("Truck not found.")
+	ErrTruckNotFound  = errors.New("Truck not found.")
 )
 
 type Truck interface {
@@ -17,7 +17,7 @@ type Truck interface {
 }
 
 type NormalTruck struct {
-	id string
+	id    string
 	cargo int
 }
 
@@ -32,8 +32,8 @@ func (t *NormalTruck) UnloadCargo() error {
 }
 
 type ElectricTruck struct {
-	id string
-	cargo int
+	id      string
+	cargo   int
 	battery float64
 }
 
@@ -60,7 +60,7 @@ func processTruck(truck Truck) error {
 	return nil
 }
 
-func main(){
+func main() {
 
 	person := make(map[string]any, 0) //or map[string]interface{}
 	person["name"] = "Tiago"
@@ -72,4 +72,17 @@ func main(){
 		return
 	}
 	log.Println(age)
+
+	// Pointer
+	t := NormalTruck{cargo: 0}
+	log.Printf("Address of original t: %p\n", &t)
+	fillTruckWithCargo(t)
+	log.Printf("t.cargo: %v\n", t.cargo)
+}
+
+// Pass t by value creates another t.
+// The function doesn't change the original t.
+func fillTruckWithCargo(t NormalTruck) {
+	t.cargo = 100
+	log.Printf("Address of t in function: %p\n", &t)
 }
