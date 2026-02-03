@@ -3,28 +3,54 @@ package main
 import (
 	"context"
 	"log"
-	"ride-sharing/services/trip-service/internal/domain"
+	"net/http"
+	"os"
+	"os/signal"
+	h "ride-sharing/services/trip-service/internal/infrastructure/http"
 	"ride-sharing/services/trip-service/internal/infrastructure/repository"
 	"ride-sharing/services/trip-service/internal/service"
+	"syscall"
 	"time"
 )
 
 func main() {
 	inmemRepo := repository.NewInmemRepository()
 	svc := service.NewService(inmemRepo)
-	ctx := context.Background()
-	fare := &domain.RideFareModel{
-		UserID: "42",
-	}
-	t, err := svc.CreateTrip(ctx, fare)
-	if err != nil {
-		log.Println(err)
+
+	mux := http.NewServeMux()
+
+	httpHandler := h.HttpHandler{Service: svc}
+
+	mux.HandleFunc("POST /preview", httpHandler.HandleTripPreview)
+
+	server := &http.Server{
+		Addr:    ":8083",
+		Handler: mux,
 	}
 
-	log.Println(t)
+	serverErrors := make(chan error, 1)
 
-	// keep the program alive
-	for {
-		time.Sleep(time.Second)
+	go func() {
+		log.Printf("Server listening on %s", server.Addr)
+		serverErrors <- server.ListenAndServe()
+	}()
+
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case err := <-serverErrors:
+		log.Printf("Error starting the server: %v", err)
+
+	case sig := <-shutdown:
+		log.Printf("Server is shutting down due to sinal: %v", sig)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(ctx); err != nil {
+			log.Printf("Could not stop the server gracefully: %v", err)
+			server.Close()
+		}
 	}
 }
