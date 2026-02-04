@@ -39,8 +39,8 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const location = {
-        latitude: 37.7749,
-        longitude: -122.4194,
+        latitude: 49.01216,
+        longitude: 12.09984,
     };
 
     const {
@@ -104,6 +104,9 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
 
         const response = await fetch(`${API_URL}${BackendEndpoints.PREVIEW_TRIP}`, {
             method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+            },
             body: JSON.stringify(payload),
         })
         const { data } = await response.json() as { data: HTTPTripPreviewResponse }

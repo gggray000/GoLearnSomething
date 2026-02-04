@@ -20,7 +20,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /trip/preview", enableCORS(handleTripPreview))
+	mux.HandleFunc("/trip/preview", enableCORS(handleTripPreview))
 	mux.HandleFunc("/ws/riders", handleRidersWebsocket)
 	mux.HandleFunc("/ws/drivers", handleDriversWebsocket)
 
