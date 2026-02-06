@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 export const DriverCard = ({ driver, packageSlug }: { driver?: Driver | null, packageSlug?: CarPackageSlug }) => {
   if (!driver) return null;
 
+  console.log(driver)
+
   const CarPlate = ({ plate }: { plate: string }) => (
     <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800 font-mono tracking-wider">
       {plate.toUpperCase()}

@@ -12,7 +12,7 @@ type RideFareModel struct {
 	UserID            string
 	PackageSlug       string
 	TotalPriceInCents float64
-	Route             trip_types.OsrmApiResponse
+	Route             *trip_types.OsrmApiResponse
 }
 
 func (r *RideFareModel) toProto() *pb.RideFare {
