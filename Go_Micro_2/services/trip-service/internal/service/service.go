@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"ride-sharing/services/trip-service/internal/domain"
 	trip_types "ride-sharing/services/trip-service/pkg/types"
@@ -14,10 +13,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-// type TripService interface {
-// 	CreateTrip(ctx context.Context, fare RideFareModel) (*TripModel, error)
-// }
 
 type service struct {
 	repo domain.TripRepository
@@ -130,7 +125,6 @@ func estimateFareRoute(f *domain.RideFareModel, route *trip_types.OsrmApiRespons
 	carPackagePrice := f.TotalPriceInCents
 	distanceInKm := route.Routes[0].Distance / 1000
 	durationInMin := route.Routes[0].Duration / 60
-	log.Println("Duration: %w", durationInMin)
 
 	distanceFare := distanceInKm * pricingCfg.PricePerKm
 	timeFare := durationInMin * pricingCfg.PricingPerMinute
