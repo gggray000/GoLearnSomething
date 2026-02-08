@@ -36,6 +36,7 @@ export default function RiderMap({ onRouteSelected }: RiderMapProps) {
     const [destination, setDestination] = useState<[number, number] | null>(null)
     const mapRef = useRef<L.Map>(null)
     const userID = useMemo(() => crypto.randomUUID(), [])
+    localStorage.setItem("userID", userID)
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const location = {

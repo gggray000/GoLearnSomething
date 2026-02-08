@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math/rand"
 	"ride-sharing/shared/contracts"
 	"ride-sharing/shared/messaging"
 
@@ -67,15 +68,14 @@ func (t *TripConsumer) handleFindAndNotifyDrivers(ctx context.Context, payload m
 			return err
 		}
 		return nil
-	}
-
-	suitableDriverID := suitableDriverIDs[0]
-	marshalledEvent, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	// Notify driver for the potential trip
-	if len(suitableDriverIDs) == 0 {
+	} else {
+		// Notify driver for the potential trip
+		randomIndex := rand.Intn(len(suitableDriverIDs))
+		suitableDriverID := suitableDriverIDs[randomIndex]
+		marshalledEvent, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
 		if err := t.rabbitmq.PublishMessage(
 			ctx,
 			contracts.DriverCmdTripRequest,

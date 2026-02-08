@@ -36,6 +36,8 @@ export const RiderTripOverview = ({
   }
 
   if (status === TripEvents.PaymentSessionCreated && paymentSession) {
+    localStorage.setItem("tripID", paymentSession.tripID)
+    localStorage.setItem("driverID", "123")
     return (
       <TripOverviewCard
         title="Payment Required"

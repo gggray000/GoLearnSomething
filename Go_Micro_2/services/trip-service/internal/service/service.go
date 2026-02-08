@@ -12,6 +12,7 @@ import (
 	"ride-sharing/shared/types"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	pb_d "ride-sharing/shared/proto/driver"
 )
 
 type service struct {
@@ -58,10 +59,6 @@ func (s *service) GetRoute(ctx context.Context, pickup, destination *types.Coord
 	}
 
 	return &routeResp, nil
-}
-
-func (s *service) StartTrip() {
-
 }
 
 func (s *service) EstimatePackagesPriceWithRoute(route *trip_types.OsrmApiResponse) []*domain.RideFareModel {
@@ -148,4 +145,12 @@ func (s *service) GetAndValidateFare(ctx context.Context, fareID, userID string)
 		return nil, fmt.Errorf("Fare does not belong to user")
 	}
 	return fare, nil
+}
+
+func (s *service) GetTripByID(ctx context.Context, id string)(*domain.TripModel, error) {
+	return s.repo.GetTripByID(ctx, id)
+}
+
+func (s *service) UpdateTrip(ctx context.Context, tripID string, status string, driver *pb_d.Driver) error {
+	return s.repo.UpdateTrip(ctx, tripID, status, driver)
 }

@@ -40,6 +40,37 @@ function HomeContent() {
     setUserType(userType)
   }
 
+  type PaymentStatusUpdateData = {
+    tripID: string;
+    userID: string;
+    driverID: string;
+  };
+
+  async function notifyTripServicePaymentSuccess() {
+    const tripID = localStorage.getItem("tripID") ?? "";
+    const userID = localStorage.getItem("userID") ?? "";
+    const driverID = localStorage.getItem("driverID") ?? "";
+
+    if (!tripID || !userID || !driverID) {
+      throw new Error("Missing tripID/userID/driverID in localStorage");
+    }
+
+    const payload: PaymentStatusUpdateData = { tripID, userID, driverID };
+
+    const res = await fetch("http://localhost:8081/webhook/stripe", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Payment webhook failed (${res.status}): ${text}`);
+    }
+  }
+
   if (payment === 'success') {
     return (
       <main className="min-h-screen bg-gradient-to-b from-white to-gray-50">
@@ -57,7 +88,16 @@ function HomeContent() {
             <Button
               className="w-full text-lg py-6"
               variant="outline"
-              onClick={() => router.push("/")}
+              onClick={async () => {
+                try {
+                  await notifyTripServicePaymentSuccess();
+                } catch (err) {
+                  console.error("Failed to notify trip-service:", err);
+                  // optionally show UI feedback instead of redirecting
+                  return; // uncomment if you want to block navigation on failure
+                }
+                router.push("/");
+              }}
             >
               Return Home
             </Button>

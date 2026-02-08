@@ -59,13 +59,13 @@ func (r *RabbitMQ) Close() {
 func (r *RabbitMQ) setupExchangesAndQueues() error {
 
 	err := r.Channel.ExchangeDeclare(
-		TripExchange,   // name
-		"topic", // type
-		true,     // durable
-		false,    // auto-deleted
-		false,    // internal
-		false,    // no-wait
-		nil,      // arguments
+		TripExchange, // name
+		"topic",      // type
+		true,         // durable
+		false,        // auto-deleted
+		false,        // internal
+		false,        // no-wait
+		nil,          // arguments
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -75,14 +75,85 @@ func (r *RabbitMQ) setupExchangesAndQueues() error {
 	if err := r.declareAndBindQueue(
 		FindAvailableDriversQueue,
 		[]string{
-			contracts.TripEventCreated, 
+			contracts.TripEventCreated,
 			contracts.TripEventDriverNotInterested,
 		},
 		TripExchange,
-	); err != nil{
+	); err != nil {
 		return err
 	}
-	
+
+	if err := r.declareAndBindQueue(
+		DriverCmdTripRequestQueue,
+		[]string{
+			contracts.DriverCmdTripRequest,
+		},
+		TripExchange,
+	); err != nil {
+		return err
+	}
+
+	if err := r.declareAndBindQueue(
+		DriverTripResponseQueue,
+		[]string{
+			contracts.DriverCmdTripAccept,
+			contracts.DriverCmdTripDecline,
+		},
+		TripExchange,
+	); err != nil {
+		return err
+	}
+
+	if err := r.declareAndBindQueue(
+		NotifyDriverNoDriversFoundQueue,
+		[]string{
+			contracts.TripEventNoDriversFound,
+		},
+		TripExchange,
+	); err != nil {
+		return err
+	}
+
+	if err := r.declareAndBindQueue(
+		NotifyDriverAssignedQueue,
+		[]string{
+			contracts.TripEventDriverAssigned,
+		},
+		TripExchange,
+	); err != nil {
+		return err
+	}
+
+	if err := r.declareAndBindQueue(
+		PaymentTripRequestQueue,
+		[]string{
+			contracts.PaymentCmdCreateSession,
+		},
+		TripExchange,
+	); err != nil {
+		return err
+	}
+
+	if err := r.declareAndBindQueue(
+		NotifyPaymentSessionCreatedQueue,
+		[]string{
+			contracts.PaymentEventSessionCreated,
+		},
+		TripExchange,
+	); err != nil {
+		return err
+	}
+
+	if err := r.declareAndBindQueue(
+		NotifyPaymentSuccessQueue,
+		[]string{
+			contracts.PaymentEventSuccess,
+		},
+		TripExchange,
+	); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -99,17 +170,17 @@ func (r *RabbitMQ) declareAndBindQueue(queueName string, messageTypes []string, 
 		log.Fatal(err)
 	}
 
-	for _, msg := range messageTypes{
+	for _, msg := range messageTypes {
 		if err := r.Channel.QueueBind(
-		q.Name, // queue name
-		msg,     // routing key
-		exchange, // exchange
-		false,
-		nil,
-	); err != nil {
-		return fmt.Errorf("Failed to bind queue to %s: %v", q.Name, err)
+			q.Name,   // queue name
+			msg,      // routing key
+			exchange, // exchange
+			false,
+			nil,
+		); err != nil {
+			return fmt.Errorf("Failed to bind queue to %s: %v", q.Name, err)
+		}
 	}
-}
 	return nil
 }
 
@@ -123,10 +194,10 @@ func (r *RabbitMQ) PublishMessage(ctx context.Context, routingKey string, messag
 
 	return r.Channel.PublishWithContext(
 		ctx,
-		TripExchange,      // exchange
-		routingKey, // routing key
-		false,   // mandatory
-		false,   // immediate
+		TripExchange, // exchange
+		routingKey,   // routing key
+		false,        // mandatory
+		false,        // immediate
 		amqp.Publishing{
 			ContentType:  "text/plain",
 			Body:         jsonMsg,
@@ -136,25 +207,25 @@ func (r *RabbitMQ) PublishMessage(ctx context.Context, routingKey string, messag
 
 type MessageHandler func(context.Context, amqp.Delivery) error
 
-func (r *RabbitMQ) ConsumeMessages(queueName string, handler MessageHandler) error{
+func (r *RabbitMQ) ConsumeMessages(queueName string, handler MessageHandler) error {
 	// Fair dispatch
 	err := r.Channel.Qos(1, 0, false)
-	if err != nil{
+	if err != nil {
 		return fmt.Errorf("Failed to set QoS: %v", err)
 	}
 
 	msgs, err := r.Channel.Consume(
 		queueName, // queue
-		"",     // consumer
-		false,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
-		)
-		if err != nil{
-			return err
-		}
+		"",        // consumer
+		false,     // auto-ack
+		false,     // exclusive
+		false,     // no-local
+		false,     // no-wait
+		nil,       // args
+	)
+	if err != nil {
+		return err
+	}
 
 	ctx := context.Background()
 
@@ -165,17 +236,17 @@ func (r *RabbitMQ) ConsumeMessages(queueName string, handler MessageHandler) err
 				log.Printf("Failed to handle the message: %v. Message body: %s", err, msg.Body)
 				// Nack the message. Set requeue to false to avoid immediate redelivery loops.
 				// Consider a dead-letter exchange (DLQ) or a more sophisticated retry mechanism for production.
-				if nackErr := msg.Nack(false, false); nackErr!=nil{
+				if nackErr := msg.Nack(false, false); nackErr != nil {
 					log.Printf("Error: Failed to Nack message: %v", nackErr)
 				}
 				continue
 			}
-			
+
 			if ackErr := msg.Ack(false); ackErr != nil {
 				log.Printf("Error: Failed to Ack message: %v. Message body: %s", ackErr, msg.Body)
 			}
 		}
-		}()
+	}()
 
 	return nil
 }
