@@ -10,6 +10,7 @@ import (
 
 	"ride-sharing/shared/env"
 	"ride-sharing/shared/messaging"
+	"ride-sharing/shared/tracing"
 
 	grpc_server "google.golang.org/grpc"
 )
@@ -19,6 +20,19 @@ var GrpcAddr = ":9092"
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	traceCfg := tracing.Config{
+		ServiceName: "driver-service",
+		Environment: env.GetString("ENVIRONMENT","development"),
+		JaegerEndpoint: env.GetString("JAEGER_ENDPOINT", "http://jaeger:14268/api/traces"),
+	}
+
+	shutdownTracing, err := tracing.InitTracer(traceCfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize the tracer: %w", err)
+	}
+
+	defer shutdownTracing(ctx)
 
 	rabbitMqURI := env.GetString("RABBITMQ_URI", "amqp://guest:guest@rabbitmq:5672/")
 
@@ -42,7 +56,7 @@ func main() {
 
 	service := NewService()
 
-	grpcServer := grpc_server.NewServer()
+	grpcServer := grpc_server.NewServer(tracing.WithTracingInterceptors()...)
 	NewGRPCHandler(grpcServer, service)
 
 	consumer := NewTripConsumer(rabbitmq, service)
