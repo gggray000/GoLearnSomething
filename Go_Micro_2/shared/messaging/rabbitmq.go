@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"ride-sharing/shared/contracts"
+	"ride-sharing/shared/tracing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -192,17 +193,24 @@ func (r *RabbitMQ) PublishMessage(ctx context.Context, routingKey string, messag
 		return fmt.Errorf("Failed to marshal message: %v", err)
 	}
 
-	return r.Channel.PublishWithContext(
-		ctx,
-		TripExchange, // exchange
-		routingKey,   // routing key
-		false,        // mandatory
-		false,        // immediate
-		amqp.Publishing{
-			ContentType:  "text/plain",
+	msg := amqp.Publishing{
+			ContentType:  "application/json", // "text/plain" before video No.85
 			Body:         jsonMsg,
 			DeliveryMode: amqp.Persistent,
-		})
+		}
+	
+	return tracing.TracedPublisher(ctx, TripExchange, routingKey, msg, r.publishWithTracing)
+}
+
+func (r *RabbitMQ) publishWithTracing(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) error {
+	return r.Channel.PublishWithContext(
+			ctx,
+			exchange, 	  // exchange
+			routingKey,   // routing key
+			false,        // mandatory
+			false,        // immediate
+			msg,
+		)
 }
 
 type MessageHandler func(context.Context, amqp.Delivery) error
@@ -227,23 +235,26 @@ func (r *RabbitMQ) ConsumeMessages(queueName string, handler MessageHandler) err
 		return err
 	}
 
-	ctx := context.Background()
-
 	go func() {
 		for msg := range msgs {
-			log.Printf("Received a message: %s", msg.Body)
-			if err := handler(ctx, msg); err != nil {
-				log.Printf("Failed to handle the message: %v. Message body: %s", err, msg.Body)
-				// Nack the message. Set requeue to false to avoid immediate redelivery loops.
-				// Consider a dead-letter exchange (DLQ) or a more sophisticated retry mechanism for production.
-				if nackErr := msg.Nack(false, false); nackErr != nil {
-					log.Printf("Error: Failed to Nack message: %v", nackErr)
+			if err := tracing.TracedConsumer(msg, func(ctx context.Context, d amqp.Delivery) error {
+				log.Printf("Received a message: %s", msg.Body)
+				if err := handler(ctx, msg); err != nil {
+					log.Printf("Failed to handle the message: %v. Message body: %s", err, msg.Body)
+					// Nack the message. Set requeue to false to avoid immediate redelivery loops.
+					// Consider a dead-letter exchange (DLQ) or a more sophisticated retry mechanism for production.
+					if nackErr := msg.Nack(false, false); nackErr != nil {
+						log.Printf("Error: Failed to Nack message: %v", nackErr)
+					}
+					return err
 				}
-				continue
-			}
 
-			if ackErr := msg.Ack(false); ackErr != nil {
-				log.Printf("Error: Failed to Ack message: %v. Message body: %s", ackErr, msg.Body)
+				if ackErr := msg.Ack(false); ackErr != nil {
+					log.Printf("Error: Failed to Ack message: %v. Message body: %s", ackErr, msg.Body)
+				}
+				return nil
+			}); err != nil {
+				log.Printf("Failed to consume message: %v", err)
 			}
 		}
 	}()
