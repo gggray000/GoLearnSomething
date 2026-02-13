@@ -46,6 +46,7 @@ spec:
                 configMapKeyRef:
                   key: JAEGER_ENDPOINT
                   name: app-config
+---
 apiVersion: v1
 kind: Service
 metadata:

@@ -30,7 +30,7 @@ func InitTracer(cfg Config) (func(context.Context) error, error) {
 	if err != nil {
 		return nil, err
 	}
-	otel.SetTraceProvider(traceProvider)
+	otel.SetTracerProvider(traceProvider)
 
 	// Propagator
 	prop := newPropagator()
@@ -47,7 +47,7 @@ func newExporter(endpoint string) (sdktrace.SpanExporter, error) {
 	return jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(endpoint)))
 }
 
-func newTraceProvider(cfg Config, exporter sdktrace.SpanExporter) (*sdktrace.TraceProvider, error) {
+func newTraceProvider(cfg Config, exporter sdktrace.SpanExporter) (*sdktrace.TracerProvider, error) {
 	res, err := resource.New(
 		context.Background(),
 		resource.WithAttributes(
@@ -59,15 +59,15 @@ func newTraceProvider(cfg Config, exporter sdktrace.SpanExporter) (*sdktrace.Tra
 		return nil, fmt.Errorf("Failed to create resource: %w", err)
 	}
 
-	traceProvider := sdktrace.NewTraceProvidfer(
+	traceProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
-		sdktrace.WithAttributes(res),
+		sdktrace.WithResource(res),
 	)
 
 	return traceProvider, nil
 }
 
-func newPropagator() propagation.TexeMapPropagator {
+func newPropagator() propagation.TextMapPropagator {
 	return propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
 		propagation.Baggage{},

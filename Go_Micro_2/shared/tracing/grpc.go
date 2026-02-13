@@ -1,10 +1,10 @@
 package tracing
 
 import (
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/stats"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
 func WithTracingInterceptors() []grpc.ServerOption {
@@ -13,16 +13,16 @@ func WithTracingInterceptors() []grpc.ServerOption {
 	}
 }
 
-func DialOptionWithTracing() []grpc.DialOption{
+func DialOptionWithTracing() []grpc.DialOption {
 	return []grpc.DialOption{
 		grpc.WithStatsHandler(newClientHandler()),
 	}
 }
 
 func newServerHandler() stats.Handler {
-	return otelgrpc.NewServerHandler(otelgrpc.WithTraceProvider(otel.GetTracerProvider))
+	return otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(otel.GetTracerProvider()))
 }
 
 func newClientHandler() stats.Handler {
-	return otelgrpc.NewClientHandler(otelgrpc.WithTraceProvider(otel.GetTracerProvider))
+	return otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(otel.GetTracerProvider()))
 }
