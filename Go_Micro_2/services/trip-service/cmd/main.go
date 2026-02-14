@@ -12,6 +12,7 @@ import (
 	"ride-sharing/services/trip-service/internal/service"
 	"syscall"
 
+	"ride-sharing/shared/db"
 	"ride-sharing/shared/env"
 	"ride-sharing/shared/messaging"
 	"ride-sharing/shared/tracing"
@@ -22,10 +23,24 @@ import (
 var GrpcAddr = ":9093"
 
 func main() {
-	inmemRepo := repository.NewInmemRepository()
-	svc := service.NewService(inmemRepo)
+	
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	mongoClient, err := db.NewMongoClient(ctx, db.NewMongoDefaultConfig())
+	if err != nil {
+		log.Fatalf("Failed to initialize MongoDB: %v", err)
+	}
+	defer mongoClient.Disconnect(ctx)
+
+	mongoDb := db.GetDatabase(mongoClient, db.NewMongoDefaultConfig())
+
+	mongoDBRepo := repository.NewMongoRepository(mongoDb)
+	if err := mongoDBRepo.CreateRideFareTTLIndex(); err != nil {
+		log.Fatal("failed to create TTL index:", err)
+	}
+
+	svc := service.NewService(mongoDBRepo)
 
 	traceCfg := tracing.Config{
 		ServiceName: "driver-service",
